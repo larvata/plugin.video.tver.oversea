@@ -1,0 +1,66 @@
+#!/usr/local/bin/python3
+
+import os
+import re
+import zipfile
+import xml.etree.ElementTree as ET
+
+
+ZIP_FILE_BASE = 'build/'
+SOURCE_BASE = 'src/'
+MANIFEST_FILE_NAME = 'addon.xml'
+
+
+def bumpVersion(ver):
+    [major, minor, patch] = ver.split('.')
+    ver = ('%s.%s.%d' % (
+        major,
+        minor,
+        (int(patch) + 1))
+    )
+    return ver
+
+
+def zipdir(path, ziph, excludes_pattern=[], strip_base = False):
+    for root, dirs, files in os.walk(path):
+        for d in dirs:
+            if any(re.search(r, d) for r in excludes_pattern):
+                dirs.remove(d)
+        for f in files:
+            if any(re.search(r, f) for r in excludes_pattern):
+                files.remove(f)
+        for file in files:
+            p1 = os.path.join(root, file)
+            p2 = os.path.relpath(p1,
+                os.path.join(path, '..'))
+            if strip_base:
+                p2 = os.path.relpath(p2, path)
+            ziph.write(p1, p2)
+
+
+# strip the debug module
+root = ET.parse(SOURCE_BASE + MANIFEST_FILE_NAME).getroot()
+ver_old = root.get('version')
+ver_new = bumpVersion(ver_old)
+root.set('version', ver_new)
+requires = root.find('requires')
+for imp in requires.findall('import'):
+    if imp.get('addon') == 'script.module.web-pdb':
+        requires.remove(imp)
+        break
+manifest = ET.tostring(root, encoding='utf8')
+
+zip_file_path = ('%splugin.video.tver.oversea.%s.zip' % (ZIP_FILE_BASE, ver_new))
+with zipfile.ZipFile(zip_file_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+    # pack source folder
+    zipdir(
+        'src/',
+        zipf,
+        [r'__pycache__', r'^\.', MANIFEST_FILE_NAME],
+        False,
+    )
+
+    zipf.writestr('src/' + MANIFEST_FILE_NAME, manifest)
+    zipf.close()
+
+print('OUTPUT: ' + zip_file_path)

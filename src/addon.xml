@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='utf8'?>
+<addon id="plugin.video.tver.oversea" version="0.0.3" name="TVer Oversea" provider-name="Larvata">
+  <requires>
+    <import addon="xbmc.python" version="3.0.0" />
+    <import addon="script.module.beautifulsoup4" version="4.9.3" />
+    <import addon="script.module.requests" version="2.25.1" />
+    <import addon="inputstream.adaptive" />
+  </requires>
+  <extension point="xbmc.python.pluginsource" library="main.py">
+    <provides>video</provides>
+  </extension>
+  <extension point="xbmc.python.script" library="script.py">
+    <provides>executable</provides>
+  </extension>
+  <extension point="xbmc.python.module" library="utils.py" />
+  <extension point="xbmc.addon.metadata">
+    <summary lang="en">TVer Kodi Video Plugin</summary>
+    <description lang="en_US">A video plugin for TVer.</description>
+    <disclaimer lang="en_US">nothing</disclaimer>
+    <assets>
+      <icon>icon.png</icon>
+    </assets>
+    <news>Updated with latest artwork metadata</news>
+  </extension>
+</addon>
