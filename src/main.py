@@ -20,10 +20,11 @@ VIEW_SHIFT = 53
 VIEW_INFO_WALL = 54
 VIEW_WIDE_LIST = 55
 
-API_BASE = 'http://tver.larvata.me:5433'
-API_GENRES = f'{API_BASE}/genre'
-API_LIST = f'{API_BASE}/list?genre={{}}'
-API_PLAYLIST = f'{API_BASE}/playlist?ref={{}}&pub={{}}'
+API_BASE = 'http://tver.larvata.me:5433/api'
+# API_BASE = 'http://localhost:5433/api'
+API_GENRES = f'{API_BASE}/genre?href={{}}'
+API_LIST = f'{API_BASE}/list/{{}}'
+API_PLAYLIST = f'{API_BASE}/playlist/{{}}/{{}}'
 
 
 # plugin url
@@ -38,46 +39,51 @@ def get_url(**kwargs):
     return f'{_URL}?{urlencode(kwargs)}'
 
 
-def render_genres(parent_title=''):
-    resp_json = fetch_json(url=API_GENRES)
+def render(parent_title='', genre_href=''):
+    resp_json = fetch_json(url=API_GENRES.format(genre_href))
     xbmcplugin.setPluginCategory(_handle, parent_title)
     xbmcplugin.setContent(_handle, 'videos')
 
+    is_list = True
     for genre in resp_json:
         title = genre.get('title')
-        key = genre.get('key')
-        url = get_url(genre_id=key, parent_title=title)
+        href = genre.get('href')
+        genre_type = genre.get('type')
         list_item = xbmcgui.ListItem(label=title)
-        xbmcplugin.addDirectoryItem(_handle, url, list_item, True)
-    xbmcplugin.endOfDirectory(_handle)
-    xbmc.executebuiltin(f'Container.SetViewMode({VIEW_WIDE_LIST})')
 
+        url = None
+        if genre_type == 'catchup':
+            is_list = False
+            pub = genre.get('publisher_id')
+            ref = genre.get('reference_id')
+            title = genre.get('title')
+            subtitle = genre.get('subtitle')
+            media = genre.get('media')
+            expire = genre.get('expire')
+            poster_url = genre.get('images')[0].get('image')
+            date = genre.get('date')
+            url = API_PLAYLIST.format(pub, ref)
+            list_item = xbmcgui.ListItem(label=f'{title}')
+            list_item.setArt({
+                'poster': poster_url,
+            })
+            list_item.setInfo('video', {
+                'plot': f'{date}\n{expire}\n{media}\n\n{subtitle}'
+            })
+            list_item.setProperty('inputstream', 'inputstream.adaptive')
+            list_item.setProperty('inputstream.adaptive.manifest_type', 'hls')
+        elif genre_type == 'special':
+            url = get_url(genre_href=href, parent_title=title)
+        else:
+            # toplevel
+            url = get_url(genre_href=href, parent_title=title)
+        # elif genre_type == 'section':
+        xbmcplugin.addDirectoryItem(_handle, url, list_item, is_list)
 
-def render_catgories(genre_id, parent_title=''):
-    resp_json = fetch_json(url=API_LIST.format(genre_id))
-    xbmcplugin.setPluginCategory(_handle, parent_title)
-    xbmcplugin.setContent(_handle, 'videos')
-
-    for item in resp_json.get('data'):
-        pub = item.get('publisher_id')
-        ref = item.get('reference_id')
-        title = item.get('title')
-        subtitle = item.get('subtitle')
-        media = item.get('media')
-        expire = item.get('expire')
-        poster_url = item.get('images')[0].get('small')
-        date = item.get('date')
-        url = API_PLAYLIST.format(ref, pub)
-        list_item = xbmcgui.ListItem(label=f'{title}')
-        list_item.setArt({
-            'poster': poster_url,
-        })
-        list_item.setInfo('video', {
-            'plot': f'{subtitle}\n\n{date}\n{media}\n\n{expire}'
-        })
-        list_item.setProperty('inputstream', 'inputstream.adaptive')
-        list_item.setProperty('inputstream.adaptive.manifest_type', 'hls')
-        xbmcplugin.addDirectoryItem(_handle, url, list_item, False)
+    if is_list:
+        xbmc.executebuiltin(f'Container.SetViewMode({VIEW_WIDE_LIST})')
+    else:
+        xbmc.executebuiltin(f'Container.SetViewMode({VIEW_INFO_WALL})')
     xbmcplugin.endOfDirectory(_handle)
 
 
@@ -86,13 +92,7 @@ def router(paramstring):
     TODO doc
     """
     params = dict(parse_qsl(paramstring))
-
-    if not params:
-        render_genres()
-    elif 'genre_id' in params:
-        render_catgories(genre_id=params.get('genre_id'), parent_title=params.get('parent_title'))
-    else:
-        print('else')
+    render(genre_href=params.get('genre_href', ''), parent_title=params.get('parent_title'))
 
 
 if __name__ == '__main__':

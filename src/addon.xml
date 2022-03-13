@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf8'?>
-<addon id="plugin.video.tver.oversea" version="0.0.3" name="TVer Oversea" provider-name="Larvata">
+<addon id="plugin.video.tver.oversea" version="0.0.5" name="TVer Oversea" provider-name="Larvata">
   <requires>
     <import addon="xbmc.python" version="3.0.0" />
     <import addon="script.module.beautifulsoup4" version="4.9.3" />
